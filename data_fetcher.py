@@ -31,8 +31,8 @@ async def fetch_data(api_key, start_date, end_date):
     url = 'https://uzshopping.retailcrm.ru/api/v5/orders'
     params = {
         'apiKey': api_key,
-        'filter[createdAtFrom]': start_date,
-        'filter[createdAtTo]': end_date,
+        'filter[statusUpdatedAtFrom]': start_date,
+        'filter[statusUpdatedAtTo]': end_date,
     }
 
     # Отримуємо першу сторінку для визначення загальної кількості сторінок

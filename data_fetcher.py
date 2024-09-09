@@ -1,45 +1,56 @@
-import requests
 import pandas as pd
 from datetime import datetime
-from time import time
-import asyncio
 import aiohttp
+import asyncio
+import time
 
 res = pd.read_csv('data/res.csv')
 
-async def fetch_data(api_key):
+
+async def req(*a, **kw):
+    async with aiohttp.ClientSession() as session:
+        async with session.request(*a, **kw) as response:
+            return await response.json()
+
+async def apr(df, n, cr, ct, cs, ce, *a, **kw):
+    async def tsk(df, n, cr, cs, ce, *a, **kw):
+        while True:
+            try:
+                j = await req(*a, **kw)
+                if j['success']:
+                    break  # Вихід з циклу, якщо запит успішний
+            except Exception as e:
+                print(f"Error fetching page {n}: {e}")
+            await asyncio.sleep(1)  # Затримка при помилці
+
+        df.loc[n, cr] = [j]  # Записуємо результат запиту
+
+    await tsk(df, n, cr, cs, ce, *a, **kw)
+
+async def fetch_data(api_key, start_date, end_date):
     url = 'https://uzshopping.retailcrm.ru/api/v5/orders'
-    current_date = datetime.now().date()
-    date = current_date.strftime('%Y-%m-%d')
     params = {
         'apiKey': api_key,
-        'filter[createdAtFrom]': '2024-08-01',
-        'filter[createdAtTo]': '2024-08-01',
+        'filter[createdAtFrom]': start_date,
+        'filter[createdAtTo]': end_date,
     }
 
-    async with aiohttp.ClientSession() as session:
-        async def fetch_page(page):
-            params_with_page = {**params, 'page': page}
-            async with session.get(url, params=params_with_page) as response:
-                return await response.json()
+    # Отримуємо першу сторінку для визначення загальної кількості сторінок
+    initial_response = await req('get', url, params=params)
+    if not initial_response['success']:
+        raise Exception("Initial request failed")
 
-        initial_response = await fetch_page(1)
-        total_pages = initial_response['pagination']['totalPageCount']
+    total_pages = initial_response['pagination']['totalPageCount']
+    print(f"Total pages: {total_pages}")
 
-        tasks = [fetch_page(page) for page in range(1, total_pages + 1)]
-        pages_data = await asyncio.gather(*tasks)
-
-    # Створення DataFrame
+    # Створюємо DataFrame для управління сторінками
     df = pd.DataFrame(range(total_pages), columns=['p']).assign(st=0., en=0., t=None, r=None)
 
-    def parse_page_data(page_data):
-        if page_data['success']:
-            return page_data['data']['orders']
-        return []
+    # Запускаємо асинхронний збір даних
+    await asyncio.gather(*[apr(df, x[0], 'r', 't', 'st', 'en', 'get', url, params=params | {'page': x[1]['p'] + 1}) for x in df.iterrows()])
 
-    orders_data = [parse_page_data(page_data) for page_data in pages_data]
-    df1 = pd.json_normalize({'data': [order for sublist in orders_data for order in sublist]}, record_path=['data', 'orders'], max_level=0)
-
+    # Обробка даних після отримання всіх сторінок
+    df1 = pd.json_normalize({'data': df['r'].sum()}, record_path=['data', 'orders'], max_level=0)
     mask = ['number', 'status', 'customFields', 'items']
     df2 = df1[mask]
 
@@ -85,21 +96,16 @@ async def fetch_data(api_key):
     df = df[~df['Назва товару'].str.contains('оставка')]
 
     def define_category(group):
-        # Перевіряємо всі товари в замовленні на наявність 'ss' або 'tv' в 'offer_id(товара)'
         for index, row in group.iterrows():
             offer_id = row['offer_id(товара)']
             item_name = row['Назва товару']
             
-            # Якщо є доставка в назві товару
             if 'оставка' in item_name:
                 group.loc[index, 'order_category'] = 'delivery'
-            # Перевіряємо, чи починається 'offer_id(товара)' з 'ss'
             elif offer_id.startswith('ss'):
                 group.loc[index, 'order_category'] = 'ss'
-            # Перевіряємо, чи починається 'offer_id(товара)' з 'tv'
             elif offer_id.startswith('tv'):
                 group.loc[index, 'order_category'] = 'tv'
-            # Якщо не 'ss' і не 'tv', призначаємо категорію 'timur'
             else:
                 group.loc[index, 'order_category'] = 'timur'
 
@@ -111,3 +117,4 @@ async def fetch_data(api_key):
     df_before['Опт цена $ (себес + 25%)'] = (df_before['Себес $ (из срм)'] * 1.25).round(2)
     
     return df_before
+

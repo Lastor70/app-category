@@ -21,7 +21,7 @@ async def apr(df, n, cr, ct, cs, ce, *a, **kw):
                     break  # Вихід з циклу, якщо запит успішний
             except Exception as e:
                 print(f"Error fetching page {n}: {e}")
-            await asyncio.sleep(1)  # Затримка при помилці
+            await asyncio.sleep(2)  # Затримка при помилці
 
         df.loc[n, cr] = [j]  # Записуємо результат запиту
 

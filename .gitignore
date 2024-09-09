@@ -1,5 +1,4 @@
 .streamlit/secrets.toml
-data/res.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

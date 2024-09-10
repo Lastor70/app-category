@@ -37,7 +37,7 @@ if 'df_new' in st.session_state:
     st.write(f'Данные за {start_date} - {end_date}')
     st.dataframe(st.session_state['df_new'])
 else:
-    st.write("Натисніть кнопку для завантаження даних.")
+    st.write("Нажмите кнопку для загрузки данных.")
 
 if 'df_new' in st.session_state:
     df_new = st.session_state['df_new']
@@ -53,7 +53,7 @@ if 'df_new' in st.session_state:
         unique_categories = df_new['order_category'].unique()
         
         # Дозволяємо користувачеві обрати категорію замовлення
-        selected_category = st.selectbox("Виберіть категорію замовлення", unique_categories)
+        selected_category = st.selectbox("Виберите категорию заказа", unique_categories)
         
         # Фільтруємо дані за обраною категорією
         category_filtered_data = df_new[df_new['order_category'] == selected_category]
@@ -63,14 +63,14 @@ if 'df_new' in st.session_state:
             unique_orders = category_filtered_data['Номер замовлення'].unique()
             
             # Дозволяємо користувачеві обрати "Номер замовлення"
-            selected_order = st.selectbox("Виберіть номер замовлення", unique_orders)
+            selected_order = st.selectbox("Виберите номер заказа", unique_orders)
             
             # Фільтруємо дані для обраного "Номеру замовлення"
             filtered_data = category_filtered_data[category_filtered_data['Номер замовлення'] == selected_order]
             
             if not filtered_data.empty:
                 # Перша таблиця з основною інформацією про замовлення
-                st.subheader("Інформація про замовлення")
+                st.subheader("Информация о заказах")
                 first_table = {
                     'Заказ': filtered_data['Номер замовлення'].iloc[0],
                     'Offer-id': filtered_data['offer_id(заказа)'].iloc[0],
@@ -79,25 +79,25 @@ if 'df_new' in st.session_state:
                 st.table(pd.DataFrame([first_table]))  # Перша таблиця
                 
                 # Друга таблиця з деталями по товарам
-                st.subheader("Деталі по товарам")
+                st.subheader("Детали по товарам")
                 second_table = filtered_data[[
                     'Название товара в срм', 'offer_article', 'order_category', 
                     'Себес $ (из срм)', 'Опт цена $ (себес + 25%)', 'Кількість товару'
                 ]]
                 second_table = second_table.rename(columns={
                     'offer_article': 'Артикул',
-                    'order_category': 'Категорія товару',
-                    'Название товара в срм': 'Назва товару',
-                    'Себес $ (из срм)': 'Собівартість $',
-                    'Опт цена $ (себес + 25%)': 'Оптова ціна $',
-                    'Кількість товару': 'Кількість'
+                    'order_category': 'Категория товара',
+                    'Название товара в срм': 'Названия товара',
+                    'Себес $ (из срм)': 'Себестоимость $',
+                    'Опт цена $ (себес + 25%)': 'Оптовая цена $',
+                    'Кількість товару': 'Количество'
                 })
                 
                 st.dataframe(second_table)  # Друга таблиця
                 
             else:
-                st.write("Немає даних для цього замовлення.")
+                st.write("Нет данных для этого заказа")
         else:
-            st.write("Немає даних для цієї категорії.")
+            st.write("Нет данных для этой категории")
 else:
-    st.write("Завантажте дані для побудови графіка.")
+    st.write("Загрузите данные для постройки таблиц")

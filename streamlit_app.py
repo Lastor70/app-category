@@ -49,43 +49,55 @@ if 'df_new' in st.session_state:
     if missing_columns:
         st.error(f"Missing columns: {', '.join(missing_columns)}")
     else:
-        # Створюємо список унікальних "Номерів замовлення"
-        unique_orders = df_new['Номер замовлення'].unique()
+        # Створюємо список унікальних категорій замовлення
+        unique_categories = df_new['order_category'].unique()
         
-        # Дозволяємо користувачеві обрати "Номер замовлення"
-        selected_order = st.selectbox("Выберите номер заказа", unique_orders)
+        # Дозволяємо користувачеві обрати категорію замовлення
+        selected_category = st.selectbox("Виберіть категорію замовлення", unique_categories)
         
-        # Фільтруємо дані для обраного "Номеру замовлення"
-        filtered_data = df_new[df_new['Номер замовлення'] == selected_order]
+        # Фільтруємо дані за обраною категорією
+        category_filtered_data = df_new[df_new['order_category'] == selected_category]
         
-        if not filtered_data.empty:
-            # Перша таблиця з основною інформацією про замовлення
-            st.subheader("Информация по заказам")
-            first_table = {
-                'Заказ': filtered_data['Номер замовлення'].iloc[0],
-                'Offer-id': filtered_data['offer_id(заказа)'].iloc[0],
-                'Order category': filtered_data['order_category'].iloc[0]
-            }
-            st.table(pd.DataFrame([first_table]))  # Перша таблиця
+        if not category_filtered_data.empty:
+            # Створюємо список унікальних "Номерів замовлення" для обраної категорії
+            unique_orders = category_filtered_data['Номер замовлення'].unique()
             
-            # Друга таблиця з деталями по товарам
-            st.subheader("Детали по товарам")
-            second_table = filtered_data[[
-                'Название товара в срм', 'offer_article', 'order_category', 
-                'Себес $ (из срм)', 'Опт цена $ (себес + 25%)', 'Кількість товару'
-            ]]
-            second_table = second_table.rename(columns={
-                'offer_article': 'Артикул',
-                'order_category': 'Категория товара',
-                'Название товара в срм': 'Название товара',
-                'Себес $ (из срм)': 'Себес $ (из срм)',
-                'Опт цена $ (себес + 25%)': 'Опт цена $ (себес + 25%)',
-                'Кількість товару': 'Кол-во'
-            })
+            # Дозволяємо користувачеві обрати "Номер замовлення"
+            selected_order = st.selectbox("Виберіть номер замовлення", unique_orders)
             
-            st.dataframe(second_table)  # Друга таблиця
+            # Фільтруємо дані для обраного "Номеру замовлення"
+            filtered_data = category_filtered_data[category_filtered_data['Номер замовлення'] == selected_order]
             
+            if not filtered_data.empty:
+                # Перша таблиця з основною інформацією про замовлення
+                st.subheader("Інформація про замовлення")
+                first_table = {
+                    'Заказ': filtered_data['Номер замовлення'].iloc[0],
+                    'Offer-id': filtered_data['offer_id(заказа)'].iloc[0],
+                    'Order category': filtered_data['order_category'].iloc[0]
+                }
+                st.table(pd.DataFrame([first_table]))  # Перша таблиця
+                
+                # Друга таблиця з деталями по товарам
+                st.subheader("Деталі по товарам")
+                second_table = filtered_data[[
+                    'Название товара в срм', 'offer_article', 'order_category', 
+                    'Себес $ (из срм)', 'Опт цена $ (себес + 25%)', 'Кількість товару'
+                ]]
+                second_table = second_table.rename(columns={
+                    'offer_article': 'Артикул',
+                    'order_category': 'Категорія товару',
+                    'Название товара в срм': 'Назва товару',
+                    'Себес $ (из срм)': 'Собівартість $',
+                    'Опт цена $ (себес + 25%)': 'Оптова ціна $',
+                    'Кількість товару': 'Кількість'
+                })
+                
+                st.dataframe(second_table)  # Друга таблиця
+                
+            else:
+                st.write("Немає даних для цього замовлення.")
         else:
-            st.write("Немає даних для цього замовлення.")
+            st.write("Немає даних для цієї категорії.")
 else:
     st.write("Завантажте дані для побудови графіка.")

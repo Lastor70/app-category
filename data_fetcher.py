@@ -102,10 +102,16 @@ async def fetch_data(api_key, start_date, end_date):
             
             if 'оставка' in item_name:
                 group.loc[index, 'order_category'] = 'delivery'
-            elif offer_id.startswith('ss'):
+            elif offer_id.startswith('ss-'):
                 group.loc[index, 'order_category'] = 'ss'
-            elif offer_id.startswith('tv'):
+            elif offer_id.startswith('tv-'):
                 group.loc[index, 'order_category'] = 'tv'
+            elif offer_id.startswith('nr-'):
+                group.loc[index, 'order_category'] = 'booster'
+            elif offer_id.startswith('cs-'):
+                group.loc[index, 'order_category'] = 'carspace'
+            elif offer_id.startswith('uzb-tim-vlad'):
+                group.loc[index, 'order_category'] = 'uzb-tim-vlad'
             else:
                 group.loc[index, 'order_category'] = 'timur'
 
@@ -115,6 +121,7 @@ async def fetch_data(api_key, start_date, end_date):
     df_before = orders.merge(res, left_on='offer_id(заказа)', right_on='offer_article', how='left')
     df_before = df_before.rename(columns={'offer_purchasePrice': 'Себес $ (из срм)'})
     df_before['Опт цена $ (себес + 25%)'] = (df_before['Себес $ (из срм)'] * 1.25).round(2)
-    
+    df_before['Название товара в срм'] = df_before['Название товара в срм'].fillna(df_before['Назва товару'])
+
     return df_before
 

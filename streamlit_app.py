@@ -26,6 +26,7 @@ def fetch_and_store_data(api_key, start_date, end_date):
     with st.spinner('Загрузка данных...'):
         df_new = load_data(api_key, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
         st.session_state['df_new'] = df_new
+        print(df_new[df_new['Номер замовлення'] == '554245UZ'])
 
 # Кнопка для завантаження даних
 if st.button('Загрузить данные'):
@@ -81,12 +82,12 @@ if 'df_new' in st.session_state:
                 # Друга таблиця з деталями по товарам
                 st.subheader("Детали по товарам")
                 second_table = filtered_data[[
-                    'Название товара в срм', 'offer_article', 'order_category', 
+                    'Название товара в срм', 'offer_article', 'product_category', 
                     'Себес $ (из срм)', 'Опт цена $ (себес + 25%)', 'Кількість товару'
                 ]]
                 second_table = second_table.rename(columns={
                     'offer_article': 'Артикул',
-                    'order_category': 'Категория товара',
+                    'product_category': 'Категория товара',
                     'Название товара в срм': 'Названия товара',
                     'Себес $ (из срм)': 'Себестоимость $',
                     'Опт цена $ (себес + 25%)': 'Оптовая цена $',

@@ -4,7 +4,7 @@ import aiohttp
 import asyncio
 import time
 
-res = pd.read_csv('data/res.csv')
+res = pd.read_csv('data/products.csv')
 
 
 async def req(*a, **kw):
@@ -69,17 +69,21 @@ async def fetch_data(api_key, start_date, end_date):
     df_items_expanded['quantity'] = df_items_expanded['items'].apply(lambda x: x['prices'][0]['quantity'] if isinstance(x, dict) and 'prices' in x and x['prices'] else None)
     df_items_expanded['externalId'] = df_items_expanded['items'].apply(lambda x: get_item_data([x], 'externalId')[0] if isinstance(x, dict) else None)
     df_items_expanded['name'] = df_items_expanded['items'].apply(lambda x: x['offer']['name'] if isinstance(x, dict) and 'offer' in x and 'name' in x['offer'] else None)
+    df_items_expanded['offer_id'] = df_items_expanded['items'].apply(lambda x: x['offer']['id'] if isinstance(x, dict) and 'offer' in x and 'id' in x['offer'] else None)
     df_items_expanded['item_buyer_id'] = df_items_expanded.apply(lambda x: x['customFields']['buyer_id'] if 'buyer_id' in x['customFields'] else None, axis=1)
+    df_items_expanded['endcycle'] = df_items_expanded.apply(lambda x: x['customFields']['endcycle'] if 'endcycle' in x['customFields'] else None, axis=1)
     df_items_expanded['item_offer_id'] = df_items_expanded.apply(lambda x: x['customFields']['offer_id'] if 'offer_id' in x['customFields'] else None, axis=1)
 
-    df_items_expanded = df_items_expanded.rename(columns={'number': 'Номер замовлення',
+    df_items_expanded = df_items_expanded.rename(columns = {'number': 'Номер замовлення',
                       'status': 'Статус',
                       'externalId': 'Product_id',
                       'name': 'Назва товару',
+                      'offer_id': 'id товара',
                       'quantity': 'Кількість товару',
                       'price': 'Ціна товару',
                       'item_offer_id': 'offer_id(заказа)',
-                      'item_buyer_id': 'buyer_id'})
+                      'item_buyer_id': 'buyer_id',
+                                                       })
 
     df_items_expanded.drop(['customFields', 'items'], axis=1, inplace=True)
     
@@ -90,19 +94,17 @@ async def fetch_data(api_key, start_date, end_date):
     df['offer_id(товара)'] = df['Product_id'].apply(lambda x: '-'.join(x.split('-')[:3]))
     df['Загальна сума'] = df['Ціна товару'] * df['Кількість товару']
 
-    desired_column_order = ['Номер замовлення', 'Статус', 'offer_id(товара)', 'Product_id', 'Назва товару', 'Кількість товару', 'Ціна товару', 'Загальна сума', 'offer_id(заказа)', 'buyer_id']
+    desired_column_order = ['Номер замовлення', 'Статус', 'offer_id(товара)', 'Product_id', 'Назва товару', 'id товара', 'Кількість товару', 'Ціна товару', 'Загальна сума', 'offer_id(заказа)', 'buyer_id', 'endcycle']
     df = df.reindex(columns=desired_column_order)
 
     df = df[~df['Назва товару'].str.contains('оставка')]
 
     def define_category(group):
         for index, row in group.iterrows():
-            offer_id = row['offer_id(товара)']
+            offer_id = row['offer_id(заказа)']
             item_name = row['Назва товару']
-            
-            if 'оставка' in item_name:
-                group.loc[index, 'order_category'] = 'delivery'
-            elif offer_id.startswith('ss-'):
+
+            if offer_id.startswith('ss-'):
                 group.loc[index, 'order_category'] = 'ss'
             elif offer_id.startswith('tv-'):
                 group.loc[index, 'order_category'] = 'tv'
@@ -114,14 +116,16 @@ async def fetch_data(api_key, start_date, end_date):
                 group.loc[index, 'order_category'] = 'uzb-tim-vlad'
             else:
                 group.loc[index, 'order_category'] = 'timur'
-
         return group
 
     orders = df.groupby('Номер замовлення').apply(define_category)
-    df_before = orders.merge(res, left_on='offer_id(заказа)', right_on='offer_article', how='left')
+    orders = orders.reset_index(drop=True)
+
+    df_before = orders.merge(res, left_on='id товара', right_on='id товара', how='left')
     df_before = df_before.rename(columns={'offer_purchasePrice': 'Себес $ (из срм)'})
     df_before['Опт цена $ (себес + 25%)'] = (df_before['Себес $ (из срм)'] * 1.25).round(2)
     df_before['Название товара в срм'] = df_before['Название товара в срм'].fillna(df_before['Назва товару'])
+    df_before['product_category'] = df_before['product_category'].fillna('timur')
 
     return df_before
 
